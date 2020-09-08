@@ -8,8 +8,9 @@ import math
 import itertools
 import collections
 
-import util
-import sampler
+from . import util
+
+from . import sampler
 
 TWO_PI = 2 * math.pi
 

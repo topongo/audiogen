@@ -10,7 +10,8 @@ from .noise import white_noise
 from .noise import white_noise_samples
 from .noise import red_noise
 
-import sampler 
+from . import sampler
+from functools import reduce
 
 def crop(gens, seconds=5, cropper=None):
 	'''
@@ -42,7 +43,7 @@ def crop_with_fades(gen, seconds, fade_in=0.01, fade_out=0.01):
 	end = itertools.islice(source, 0, fade_out_samples)
 
 	def linear_fade(samples, direction="in"):
-		for i in xrange(samples):
+		for i in range(samples):
 			if direction == "in":
 				yield ( 1.0 / samples ) * i + 0
 			elif direction == "out":
@@ -71,7 +72,7 @@ def crop_with_fade_out(gen, seconds, fade=.01):
 	end = itertools.islice(source, 0, fade_samples)
 
 	def fader():
-		for i in xrange(fade_samples):
+		for i in range(fade_samples):
 			yield 1 - (float(i) / fade_samples) ** 1
 		while True:
 			yield 0
@@ -110,8 +111,8 @@ def crop_at_zero_crossing(gen, seconds=5, error=0.1):
 
 	# find min by sorting buffer samples, first by abs of sample, then by distance from optimal
 	best = sorted(enumerate(end), key=lambda x: (math.fabs(x[1]),abs((buffer_length/2)-x[0])))
-	print best[:10]
-	print best[0][0]
+	print(best[:10])
+	print(best[0][0])
 
 	# todo: better logic when we don't have a perfect zero crossing
 	#if best[0][1] != 0:
@@ -127,9 +128,13 @@ def normalize(generator, min_in=0, max_in=256, min_out=-1, max_out=1):
 	scale = float(max_out - min_out) / (max_in - min_in)
 	return ((sample - min_in) * scale + min_out for sample in generator)
 
+def normalize_dict(generator, min_in=0, max_in=256, min_out=-1, max_out=1):
+	scale = float(max_out - min_out) / (max_in - min_in)
+	return [ (sample - min_in) * scale + min_out for sample in generator ]
+
 def hard_clip(generator, min=-1, max=1):
 	while True:
-		sample = generator.next()
+		sample = next(generator)
 		if sample > max:
 			logger.warn("Warning, clipped value %f > max %f" % (sample, max))
 			yield max
@@ -141,10 +146,10 @@ def hard_clip(generator, min=-1, max=1):
 
 def vector_reduce(op, generators):
 	while True:
-		yield reduce(op, [g.next() for g in generators])
+		yield reduce(op, [next(g) for g in generators])
 def vector_reduce1(op, generators):
 	while True:
-		yield reduce(op, [g.next() for g in generators])
+		yield reduce(op, [next(g) for g in generators])
 
 def sum(*generators):
 	return vector_reduce(lambda a,b: a + b, generators)
@@ -174,8 +179,8 @@ def clip(gen, limit):
 	if not hasattr(limit, 'next'):
 		limit = constant(limit)
 	while True:
-		sample = gen.next()
-		current_limit = limit.next()
+		sample = next(gen)
+		current_limit = next(limit)
 		if math.fabs(sample) > current_limit:
 			yield current_limit * (math.fabs(sample) / sample if sample != 0 else 0)
 		else:
@@ -185,8 +190,8 @@ def envelope(gen, volume):
 	if not hasattr(volume, 'next'):
 		volume = constant(volume)
 	while True:
-		sample = gen.next()
-		current_volume = volume.next()
+		sample = next(gen)
+		current_volume = next(volume)
 		yield current_volume * sample
 
 def loop(*gens):

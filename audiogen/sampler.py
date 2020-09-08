@@ -16,7 +16,7 @@ import sys
 import errno
 import contextlib
 
-from StringIO import StringIO
+from io import StringIO
 
 from .util import hard_clip
 from .util import normalize
@@ -61,7 +61,7 @@ def file_is_seekable(f):
 	try:
 		f.tell()
 		logger.info("File is seekable!")
-	except IOError, e:
+	except IOError as e:
 		if e.errno == errno.ESPIPE:
 			return False
 		else:
@@ -92,7 +92,7 @@ def interleave(channels):
 	of the channels in the list. 
 	'''
 	while True:
-		yield "".join([channel.next() for channel in channels])
+		yield b"".join([next(channel) for channel in channels])
 
 def buffer(stream, buffer_size=BUFFER_SIZE):
 	'''
@@ -105,7 +105,7 @@ def buffer(stream, buffer_size=BUFFER_SIZE):
 	disk at once for faster writes.
 	'''
 	i = iter(stream)
-	return iter(lambda: "".join(itertools.islice(i, buffer_size)), "") 
+	return iter(lambda: b"".join(itertools.islice(i, buffer_size)), "")
 	
 
 def wav_samples(channels, sample_width=SAMPLE_WIDTH, raw_samples=False):
